@@ -24,9 +24,6 @@ public protocol CXConfirmBarAction {
 
     /// The background color of the action button.
     var backgroundColor: Color { get }
-
-    /// The action to perform when the button is tapped.
-    var action: () -> Void { get }
 }
 
 /// A customizable confirmation bar component that provides styled action buttons.
@@ -44,12 +41,10 @@ public protocol CXConfirmBarAction {
 /// CXConfirmBar(
 ///     cancelAction: CXConfirmBarCancelAction(
 ///         title: "Cancel",
-///         action: dismissForm
 ///     ),
 ///     confirmAction: CXConfirmBarConfirmAction(
 ///         title: "Save",
 ///         systemImage: "checkmark",
-///         action: saveChanges
 ///     )
 /// )
 /// ```
@@ -71,6 +66,9 @@ public struct CXConfirmBar: View {
     /// The spacing between action buttons
     var spacing: CGFloat?
 
+    /// Binding to track the selected action
+    @Binding var selectedAction: ActionType
+
     // MARK: - Initializers
 
     /// Creates a new confirmation bar with the specified actions.
@@ -78,10 +76,16 @@ public struct CXConfirmBar: View {
     ///   - cancelAction: The action for the cancel button
     ///   - confirmAction: Optional action for the confirm button
     ///   - spacing: Optional spacing between buttons (uses system default if nil)
-    public init(cancelAction: CXConfirmBarAction = .cancel, confirmAction: CXConfirmBarAction? = nil, spacing: CGFloat? = nil) {
+    public init(
+        cancelAction: CXConfirmBarAction = .cancel,
+        confirmAction: CXConfirmBarAction? = nil,
+        spacing: CGFloat? = nil,
+        selectedAction: Binding<ActionType>
+    ) {
         self.cancelAction = cancelAction
         self.confirmAction = confirmAction
         self.spacing = spacing
+        _selectedAction = selectedAction
     }
 
     // MARK: - Views
@@ -101,7 +105,9 @@ public struct CXConfirmBar: View {
     /// - Returns: A styled button view
     @ViewBuilder
     private func actionButton(action: CXConfirmBarAction) -> some View {
-        Button(action: action.action) {
+        Button {
+            selectedAction = action.actionType
+        } label: {
             Label(action.title, systemImage: action.systemImage ?? "")
                 .labelStyle(.flex(isIconVisible: action.systemImage != nil))
                 .padding()
@@ -124,8 +130,6 @@ public struct CXConfirmBarCancelAction: CXConfirmBarAction {
     public var foregroundColor: Color = .primary
     public var backgroundColor: Color = .systemGray
 
-    public var action: () -> Void = {}
-
     /// Creates a new cancel action with customizable properties.
     /// - Parameters:
     ///   - title: The localized text to display (default: "Cancel")
@@ -136,14 +140,12 @@ public struct CXConfirmBarCancelAction: CXConfirmBarAction {
     public init(title: LocalizedStringKey = "Cancel",
                 systemImage: String? = nil,
                 foregroundColor: Color = .primary,
-                backgroundColor: Color = .systemGray,
-                action: @escaping () -> Void = {})
+                backgroundColor: Color = .systemGray)
     {
         self.title = title
         self.systemImage = systemImage
         self.foregroundColor = foregroundColor
         self.backgroundColor = backgroundColor
-        self.action = action
     }
 }
 
@@ -158,8 +160,6 @@ public struct CXConfirmBarConfirmAction: CXConfirmBarAction {
     public var foregroundColor: Color = .primary
     public var backgroundColor: Color = .systemGray
 
-    public var action: () -> Void = {}
-
     /// Creates a new confirm action with customizable properties.
     /// - Parameters:
     ///   - title: The localized text to display (default: "Confirm")
@@ -170,14 +170,12 @@ public struct CXConfirmBarConfirmAction: CXConfirmBarAction {
     public init(title: LocalizedStringKey = "Confirm",
                 systemImage: String? = nil,
                 foregroundColor: Color = .primary,
-                backgroundColor: Color = .systemGray,
-                action: @escaping () -> Void = {})
+                backgroundColor: Color = .systemGray)
     {
         self.title = title
         self.systemImage = systemImage
         self.foregroundColor = foregroundColor
         self.backgroundColor = backgroundColor
-        self.action = action
     }
 }
 
@@ -195,7 +193,8 @@ public extension CXConfirmBarAction where Self == CXConfirmBarCancelAction {
         // Default configuration
         CXConfirmBar(
             cancelAction: CXConfirmBarCancelAction(),
-            confirmAction: CXConfirmBarConfirmAction()
+            confirmAction: CXConfirmBarConfirmAction(),
+            selectedAction: .constant(.confirm)
         )
 
         // Custom configuration
@@ -211,7 +210,8 @@ public extension CXConfirmBarAction where Self == CXConfirmBarCancelAction {
                 foregroundColor: .white,
                 backgroundColor: .blue
             ),
-            spacing: CXSpacing.twoX
+            spacing: CXSpacing.twoX,
+            selectedAction: .constant(.confirm)
         )
     }
     .padding()

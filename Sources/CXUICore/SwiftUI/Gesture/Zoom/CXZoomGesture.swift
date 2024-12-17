@@ -71,7 +71,7 @@ public struct CXZoomGesture: ViewModifier {
             .onEnded { gesture in
                 guard config.isDoubleTapEnabled else { return }
 
-                if let onDoubleTap = config.onDoubleTap {
+                if let onDoubleTap {
                     onDoubleTap()
                 } else {
                     toggleZoom(value: gesture)
