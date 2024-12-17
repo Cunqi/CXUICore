@@ -78,7 +78,7 @@ public struct CXConfirmBar: View {
     ///   - cancelAction: The action for the cancel button
     ///   - confirmAction: Optional action for the confirm button
     ///   - spacing: Optional spacing between buttons (uses system default if nil)
-    public init(cancelAction: CXConfirmBarAction, confirmAction: CXConfirmBarAction? = nil, spacing: CGFloat? = nil) {
+    public init(cancelAction: CXConfirmBarAction = .cancel, confirmAction: CXConfirmBarAction? = nil, spacing: CGFloat? = nil) {
         self.cancelAction = cancelAction
         self.confirmAction = confirmAction
         self.spacing = spacing
@@ -88,10 +88,10 @@ public struct CXConfirmBar: View {
 
     public var body: some View {
         HStack(spacing: spacing) {
-            ActionButton(action: cancelAction)
+            actionButton(action: cancelAction)
 
             if let confirmAction {
-                ActionButton(action: confirmAction)
+                actionButton(action: confirmAction)
             }
         }
     }
@@ -100,7 +100,7 @@ public struct CXConfirmBar: View {
     /// - Parameter action: The action configuration to use for the button
     /// - Returns: A styled button view
     @ViewBuilder
-    private func ActionButton(action: CXConfirmBarAction) -> some View {
+    private func actionButton(action: CXConfirmBarAction) -> some View {
         Button(action: action.action) {
             Label(action.title, systemImage: action.systemImage ?? "")
                 .labelStyle(.flex(isIconVisible: action.systemImage != nil))
@@ -120,7 +120,7 @@ public struct CXConfirmBar: View {
 public struct CXConfirmBarCancelAction: CXConfirmBarAction {
     public var actionType: CXConfirmBar.ActionType = .cancel
     public var title: LocalizedStringKey = "Cancel"
-    public var systemImage: String? = nil
+    public var systemImage: String?
     public var foregroundColor: Color = .primary
     public var backgroundColor: Color = .systemGray
 
@@ -154,7 +154,7 @@ public struct CXConfirmBarCancelAction: CXConfirmBarAction {
 public struct CXConfirmBarConfirmAction: CXConfirmBarAction {
     public var actionType: CXConfirmBar.ActionType = .confirm
     public var title: LocalizedStringKey = "Confirm"
-    public var systemImage: String? = nil
+    public var systemImage: String?
     public var foregroundColor: Color = .primary
     public var backgroundColor: Color = .systemGray
 
@@ -179,6 +179,13 @@ public struct CXConfirmBarConfirmAction: CXConfirmBarAction {
         self.backgroundColor = backgroundColor
         self.action = action
     }
+}
+
+// MARK: - Extensions
+
+public extension CXConfirmBarAction where Self == CXConfirmBarCancelAction {
+    /// Creates a new cancel action with default properties.
+    static var cancel: CXConfirmBarAction { CXConfirmBarCancelAction() }
 }
 
 #Preview {
