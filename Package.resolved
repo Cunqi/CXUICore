@@ -1,0 +1,15 @@
+{
+  "originHash" : "f26481baa9dee9b6cb1ba7da8f954d4612d2722e771e8d2e64adce9fe764b2b0",
+  "pins" : [
+    {
+      "identity" : "cxfoundation",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Cunqi/CXFoundation.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "b6d46f04393c9f5cd36e6aad9765b14f4c0d2369"
+      }
+    }
+  ],
+  "version" : 3
+}
