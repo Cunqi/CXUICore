@@ -30,8 +30,16 @@ public struct CXZoomGesture: ViewModifier {
         var isDoubleTapEnabled: Bool
         /// Available size for the content
         var availableSize: CGSize
-        /// Optional action to perform on double tap
-        var onDoubleTap: DoubleTapAction?
+
+        public init(
+            isDisabled: Bool = false,
+            isDoubleTapEnabled: Bool = true,
+            availableSize: CGSize
+        ) {
+            self.isDisabled = isDisabled
+            self.isDoubleTapEnabled = isDoubleTapEnabled
+            self.availableSize = availableSize
+        }
     }
 
     // MARK: - Properties
@@ -40,6 +48,9 @@ public struct CXZoomGesture: ViewModifier {
     var config: Config
     /// Binding to track zoom state
     @Binding var isZoomIn: Bool
+
+    /// Optional action to perform on double tap
+    var onDoubleTap: DoubleTapAction?
 
     // MARK: - Private properties
 
@@ -257,5 +268,19 @@ public struct CXZoomGesture: ViewModifier {
         maxZoomScale: CGFloat
     ) -> CGFloat {
         max(maxZoomScale, makeZoomScale(content: content, screen: screen))
+    }
+}
+
+// MARK: - Extensions
+
+public extension View {
+    /// Adds zoom gesture support to a view.
+    /// - Parameters:
+    ///   - config: Configuration for the zoom gesture behavior.
+    ///   - isZoomIn: Binding to track zoom state.
+    /// - Returns: A view with zoom gesture support.
+    @available(iOS 17.0, *)
+    func zoomGesture(config: CXZoomGesture.Config, isZoomIn: Binding<Bool>, onDoubleTap: CXZoomGesture.DoubleTapAction? = nil) -> some View {
+        modifier(CXZoomGesture(config: config, isZoomIn: isZoomIn, onDoubleTap: onDoubleTap))
     }
 }
