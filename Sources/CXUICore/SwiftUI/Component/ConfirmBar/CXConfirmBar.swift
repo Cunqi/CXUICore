@@ -96,6 +96,7 @@ public struct CXConfirmBar: View {
 
             if let confirmAction {
                 actionButton(action: confirmAction)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
     }
@@ -186,33 +187,48 @@ public extension CXConfirmBarAction where Self == CXConfirmBarCancelAction {
     static var cancel: CXConfirmBarAction { CXConfirmBarCancelAction() }
 }
 
-#Preview {
-    VStack {
-        Spacer()
+fileprivate struct CXConfirmBarDemoHost: View {
+    
+    @State private var selectedAction: CXConfirmBar.ActionType = .none
+    @State private var isConfirmVisible = false
+    
+    var body: some View {
+        VStack {
+            Spacer()
 
-        // Default configuration
-        CXConfirmBar(
-            cancelAction: CXConfirmBarCancelAction(),
-            confirmAction: CXConfirmBarConfirmAction(),
-            selectedAction: .constant(.confirm)
-        )
+            // Default configuration
+            CXConfirmBar(
+                cancelAction: CXConfirmBarCancelAction(),
+                confirmAction: CXConfirmBarConfirmAction(),
+                selectedAction: .constant(.confirm)
+            )
 
-        // Custom configuration
-        CXConfirmBar(
-            cancelAction: CXConfirmBarCancelAction(
-                title: "Discard",
-                foregroundColor: .white,
-                backgroundColor: .red
-            ),
-            confirmAction: CXConfirmBarConfirmAction(
-                title: "Save",
-                systemImage: "checkmark",
-                foregroundColor: .white,
-                backgroundColor: .blue
-            ),
-            spacing: CXSpacing.twoX,
-            selectedAction: .constant(.confirm)
-        )
+            // Custom configuration
+            CXConfirmBar(
+                cancelAction: CXConfirmBarCancelAction(
+                    title: "Discard",
+                    foregroundColor: .white,
+                    backgroundColor: .red
+                ),
+                confirmAction: !isConfirmVisible ? nil : CXConfirmBarConfirmAction(
+                    title: "Save",
+                    systemImage: "checkmark",
+                    foregroundColor: .white,
+                    backgroundColor: .blue
+                ),
+                spacing: CXSpacing.twoX,
+                selectedAction: $selectedAction
+            )
+        }
+        .padding()
+        .onChange(of: selectedAction) { newValue in
+            withAnimation {
+                isConfirmVisible.toggle()
+            }
+        }
     }
-    .padding()
+}
+
+#Preview {
+    CXConfirmBarDemoHost()
 }
