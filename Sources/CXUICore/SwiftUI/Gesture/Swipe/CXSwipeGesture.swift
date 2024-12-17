@@ -71,9 +71,8 @@ public struct CXSwipeGesture: ViewModifier {
     @Binding var opacity: CGFloat
     /// The predicted direction of the swipe based on the current gesture.
     @Binding var predictedDirection: CXSwipeDirection
-
-    /// Callback triggered when a swipe gesture is completed.
-    var onSwipe: (CXSwipeDirection) -> Void
+    /// The decided direction of the swipe gesture.
+    @Binding var decidedDirection: CXSwipeDirection
 
     // MARK: - Private properties
 
@@ -97,12 +96,12 @@ public struct CXSwipeGesture: ViewModifier {
     ///   - translation: Binding to the view's translation
     ///   - opacity: Binding to the view's opacity
     ///   - predictedDirection: Binding to the predicted swipe direction
-    ///   - onSwipe: Callback triggered when a swipe is completed
+    ///   - decidedDirection: Binding to the decided swipe direction
     public init(config: Config = .init(),
                 translation: Binding<CGSize>,
                 opacity: Binding<CGFloat>,
                 predictedDirection: Binding<CXSwipeDirection>,
-                onSwipe: @escaping (CXSwipeDirection) -> Void)
+                decidedDirection: Binding<CXSwipeDirection>)
     {
         self.config = config
         swipeDirectionGenerator = CXSwipeDirection.Generator(
@@ -115,8 +114,7 @@ public struct CXSwipeGesture: ViewModifier {
         _translation = translation
         _opacity = opacity
         _predictedDirection = predictedDirection
-
-        self.onSwipe = onSwipe
+        _decidedDirection = decidedDirection
     }
 
     public func body(content: Content) -> some View {
@@ -153,7 +151,7 @@ public struct CXSwipeGesture: ViewModifier {
             .onEnded { _ in
                 let decidedDirection = swipeDirectionGenerator.endDirection(for: lockedDirection, translation: translation * config.swipeScale)
                 withAnimation {
-                    onSwipe(decidedDirection)
+                    self.decidedDirection = decidedDirection
                     reset()
                 }
             },
@@ -190,20 +188,20 @@ public extension View {
     ///   - translation: Binding to track the view's translation during the swipe
     ///   - opacity: Binding to track the view's opacity during the swipe
     ///   - predictedDirection: Binding to track the predicted swipe direction
-    ///   - onSwipe: Callback triggered when a swipe is completed
+    ///   - decidedDirection: Binding to track the decided swipe direction
     /// - Returns: A view with the swipe gesture modifier applied
     func swipeGesture(config: CXSwipeGesture.Config = .init(),
                       translation: Binding<CGSize>,
                       opacity: Binding<CGFloat> = .constant(1.0),
-                      predictedDirection: Binding<CXSwipeDirection>,
-                      onSwipe: @escaping (CXSwipeDirection) -> Void) -> some View
+                      predictedDirection: Binding<CXSwipeDirection> = .constant(.none),
+                      decidedDirection: Binding<CXSwipeDirection>) -> some View
     {
         modifier(CXSwipeGesture(
             config: config,
             translation: translation,
             opacity: opacity,
             predictedDirection: predictedDirection,
-            onSwipe: onSwipe
+            decidedDirection: decidedDirection
         ))
     }
 }
