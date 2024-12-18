@@ -12,8 +12,6 @@ import SwiftUI
 /// double-tap zooming and bounds checking to ensure content stays within view.
 @available(iOS 17.0, *)
 public struct CXZoomGesture: ViewModifier {
-    /// Action to be performed on double tap
-    public typealias DoubleTapAction = () -> Void
 
     // MARK: - Constants
 
@@ -24,21 +22,25 @@ public struct CXZoomGesture: ViewModifier {
 
     /// Configuration options for the zoom gesture
     public struct Config {
+        /// Available size for the content
+        var availableSize: CGSize
         /// Whether the gesture is disabled
         var isDisabled: Bool
         /// Whether double-tap zoom is enabled
         var isDoubleTapEnabled: Bool
-        /// Available size for the content
-        var availableSize: CGSize
+        /// Duration of the zoom animation
+        var animationDuration: TimeInterval
 
         public init(
+            availableSize: CGSize,
             isDisabled: Bool = false,
             isDoubleTapEnabled: Bool = true,
-            availableSize: CGSize
+            animationDuration: TimeInterval = CXAnimation.Duration.quick
         ) {
             self.isDisabled = isDisabled
             self.isDoubleTapEnabled = isDoubleTapEnabled
             self.availableSize = availableSize
+            self.animationDuration = animationDuration
         }
     }
 
@@ -48,9 +50,8 @@ public struct CXZoomGesture: ViewModifier {
     var config: Config
     /// Binding to track zoom state
     @Binding var isZoomIn: Bool
-
     /// Optional action to perform on double tap
-    var onDoubleTap: DoubleTapAction?
+    var onDoubleTap: CXNoArgumentAction?
 
     // MARK: - Private properties
 
@@ -81,7 +82,7 @@ public struct CXZoomGesture: ViewModifier {
 
     /// Drag gesture recognizer for panning zoomed content
     private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
+        DragGesture()
             .onChanged { gesture in
                 withAnimation(.interactiveSpring) {
                     transform = latestTransform.translatedBy(
@@ -91,11 +92,11 @@ public struct CXZoomGesture: ViewModifier {
                 }
             }
             .onEnded { _ in
-                let zoomedTransform = makeDragEndTransform()
-                withAnimation(.snappy) {
-                    transform = zoomedTransform
-                    latestTransform = zoomedTransform
-                    zoomScale = zoomedTransform.scaleX
+                let dragEndTransform = makeDragEndTransform(transform: transform, zoomScale: zoomScale)
+                withAnimation(.snappy(duration: config.animationDuration)) {
+                    transform = dragEndTransform
+                    latestTransform = dragEndTransform
+                    zoomScale = dragEndTransform.scaleX
                 }
             }
     }
@@ -104,20 +105,22 @@ public struct CXZoomGesture: ViewModifier {
     private var magnifyGesture: some Gesture {
         MagnifyGesture(minimumScaleDelta: 0)
             .onChanged { gesture in
-                let zoomedTransform = makeMagnifyTransform(
-                    scale: gesture.magnification,
-                    anchor: gesture.startAnchor.scaledBy(contentSize)
-                )
+                let zoomedTransform = makeMagnifyTransform(scale: gesture.magnification, anchor: gesture.startAnchor.scaledBy(contentSize))
                 withAnimation(.interactiveSpring) {
                     transform = latestTransform.concatenating(zoomedTransform)
                 }
             }
             .onEnded { gesture in
                 let zoomedTransform = makeMagnifyEndTransform(anchor: gesture.startLocation)
-                withAnimation {
-                    transform = zoomedTransform
-                    latestTransform = zoomedTransform
-                    zoomScale = zoomedTransform.scaleX
+                let finalizedTransform = makeDragEndTransform(
+                    transform: zoomedTransform,
+                    zoomScale: zoomedTransform.scaleX
+                )
+
+                withAnimation(.snappy(duration: config.animationDuration)) {
+                    self.transform = finalizedTransform
+                    latestTransform = finalizedTransform
+                    zoomScale = finalizedTransform.scaleX
                 }
             }
     }
@@ -127,9 +130,9 @@ public struct CXZoomGesture: ViewModifier {
     public func body(content: Content) -> some View {
         content
             .zoomTransformEffect(transform)
-            .highPriorityGesture(dragGesture, including: isZoomIn ? .all : .subviews)
-            .highPriorityGesture(magnifyGesture, including: config.isDisabled ? .none : .all)
-            .highPriorityGesture(doubleTapGesture, including: config.isDisabled ? .none : .all)
+            .gesture(dragGesture, including: isZoomIn ? .all : .subviews)
+            .gesture(doubleTapGesture, including: config.isDisabled ? .none : .all)
+            .gesture(magnifyGesture, including: config.isDisabled ? .none : .all)
             .onGeometryChange(for: CGSize.self) { proxy in
                 proxy.size
             } action: { newValue in
@@ -143,13 +146,13 @@ public struct CXZoomGesture: ViewModifier {
                 )
             }
             .onChange(of: zoomScale) { zoomScale in
-                withAnimation {
+                withAnimation(.snappy(duration: config.animationDuration)) {
                     isZoomIn = zoomScale > 1.0
                 }
             }
             .onChange(of: isZoomIn) { isZoomIn in
                 if !isZoomIn {
-                    withAnimation(.snappy) {
+                    withAnimation(.snappy(duration: config.animationDuration)) {
                         transform = .identity
                         latestTransform = .identity
                         zoomScale = 1.0
@@ -163,7 +166,7 @@ public struct CXZoomGesture: ViewModifier {
     /// Toggles zoom state based on double tap location
     private func toggleZoom(value: SpatialTapGesture.Value) {
         let zoomedTransform = makeDoubleTapTransform(location: value.location)
-        withAnimation {
+        withAnimation(.snappy(duration: config.animationDuration)) {
             transform = zoomedTransform
             latestTransform = zoomedTransform
             zoomScale = zoomedTransform.scaleX
@@ -171,7 +174,7 @@ public struct CXZoomGesture: ViewModifier {
     }
 
     /// Creates transform for drag gesture end state
-    private func makeDragEndTransform() -> CGAffineTransform {
+    private func makeDragEndTransform(transform: CGAffineTransform, zoomScale: CGFloat) -> CGAffineTransform {
         if transform.scaleX < 1.0 || transform.scaleY < 1.0 {
             return .identity
         }
@@ -280,7 +283,7 @@ public extension View {
     ///   - isZoomIn: Binding to track zoom state.
     /// - Returns: A view with zoom gesture support.
     @available(iOS 17.0, *)
-    func zoomGesture(config: CXZoomGesture.Config, isZoomIn: Binding<Bool>, onDoubleTap: CXZoomGesture.DoubleTapAction? = nil) -> some View {
+    func zoomGesture(config: CXZoomGesture.Config, isZoomIn: Binding<Bool>, onDoubleTap: CXNoArgumentAction? = nil) -> some View {
         modifier(CXZoomGesture(config: config, isZoomIn: isZoomIn, onDoubleTap: onDoubleTap))
     }
 }

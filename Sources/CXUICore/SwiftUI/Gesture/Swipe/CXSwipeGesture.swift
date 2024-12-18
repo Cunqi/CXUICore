@@ -9,6 +9,7 @@ import SwiftUI
 
 /// A SwiftUI view modifier that adds customizable swipe gesture functionality to any view.
 /// This gesture supports both horizontal and vertical swipes with configurable thresholds and visual feedback.
+@available(iOS 17.0, *)
 public struct CXSwipeGesture: ViewModifier {
     /// Configuration options for the swipe gesture behavior.
     public struct Config {
@@ -118,52 +119,54 @@ public struct CXSwipeGesture: ViewModifier {
     }
 
     public func body(content: Content) -> some View {
-        content.highPriorityGesture(
-            DragGesture(
-                minimumDistance: 0
+        content
+            .highPriorityGesture(
+                DragGesture()
+                    .updating($isDragging) { _, state, _ in
+                        state = true
+                    }
+                    .onChanged { gesture in
+                        latestDragGestureValue = gesture
+
+                        let translation = gesture.translation
+
+                        if lockedDirection == .none {
+                            lockedDirection = swipeDirectionGenerator.direction(for: translation)
+                            predictedDirection = lockedDirection
+                            lockedYPosition = translation.height
+                        }
+
+                        switch lockedDirection {
+                        case .left, .right:
+                            self.translation = CGSize(width: translation.width * config.swipeScale, height: lockedYPosition)
+                            self.opacity = translation.width.magnitude * config.swipeScale / config.maxHorizontalSwipeDistance
+                        case .up, .down:
+                            self.translation = CGSize(width: .zero, height: translation.height)
+                            self.opacity = max(config.minOpacity, 1.0 - translation.height.magnitude * config.swipeScale / config.maxVerticalSwipeDistance)
+                        case .none:
+                            self.translation = translation * config.swipeScale
+                            self.opacity = 1.0
+                        }
+                    }
+                    .onEnded { gesture in
+                        let decidedDirection = swipeDirectionGenerator.endDirection(
+                            for: lockedDirection,
+                            translation: gesture.predictedEndTranslation * config.swipeScale
+                        )
+                        withAnimation {
+                            self.decidedDirection = decidedDirection
+                            reset()
+                        }
+                    },
+                including: config.isDisabled ? .subviews : .gesture
             )
-            .updating($isDragging) { _, state, _ in
-                state = true
-            }
-            .onChanged { gesture in
-                latestDragGestureValue = gesture
-
-                let translation = gesture.translation
-
-                if lockedDirection == .none {
-                    lockedDirection = swipeDirectionGenerator.direction(for: translation)
-                    predictedDirection = lockedDirection
-                    lockedYPosition = translation.height
-                }
-
-                switch lockedDirection {
-                case .left, .right:
-                    self.translation = CGSize(width: translation.width * config.swipeScale, height: lockedYPosition)
-                    self.opacity = translation.width.magnitude * config.swipeScale / config.maxHorizontalSwipeDistance
-                case .up, .down:
-                    self.translation = CGSize(width: .zero, height: translation.height * config.swipeScale)
-                    self.opacity = max(config.minOpacity, 1.0 - translation.height.magnitude * config.swipeScale / config.maxVerticalSwipeDistance)
-                case .none:
-                    self.translation = translation
-                    self.opacity = 1.0
+            .onChange(of: isDragging) { _, isDragging in
+                if !isDragging && latestDragGestureValue != nil {
+                    withAnimation {
+                        reset()
+                    }
                 }
             }
-            .onEnded { _ in
-                let decidedDirection = swipeDirectionGenerator.endDirection(for: lockedDirection, translation: translation * config.swipeScale)
-                withAnimation {
-                    self.decidedDirection = decidedDirection
-                    reset()
-                }
-            },
-            including: config.isDisabled ? .subviews : .gesture
-        )
-        .onChange(of: isDragging) { isDragging in
-            if !isDragging && latestDragGestureValue != nil {
-                withAnimation {
-                    reset()
-                }
-            }
-        }
     }
 
     // MARK: - Private methods
@@ -190,8 +193,9 @@ public extension View {
     ///   - predictedDirection: Binding to track the predicted swipe direction
     ///   - decidedDirection: Binding to track the decided swipe direction
     /// - Returns: A view with the swipe gesture modifier applied
+    @available(iOS 17.0, *)
     func swipeGesture(config: CXSwipeGesture.Config = .init(),
-                      translation: Binding<CGSize>,
+                      translation: Binding<CGSize> = .constant(.zero),
                       opacity: Binding<CGFloat> = .constant(1.0),
                       predictedDirection: Binding<CXSwipeDirection> = .constant(.none),
                       decidedDirection: Binding<CXSwipeDirection>) -> some View

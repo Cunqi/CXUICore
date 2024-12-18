@@ -34,6 +34,16 @@ public extension CGSize {
         height / width
     }
 
+    /// The shortest edge of the size.
+    var shortestEdge: CGFloat {
+        min(width, height)
+    }
+
+    /// The longest edge of the size.
+    var longestEdge: CGFloat {
+        max(width, height)
+    }
+
     /// The magnitude (length) of the size when treated as a vector.
     /// Calculated as the square root of (width² + height²).
     var magnitude: CGFloat {

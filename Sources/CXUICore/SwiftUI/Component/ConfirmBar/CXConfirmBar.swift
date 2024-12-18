@@ -109,7 +109,7 @@ public struct CXConfirmBar: View {
         Button {
             selectedAction = action.actionType
         } label: {
-            Label(action.title, systemImage: action.systemImage ?? "")
+            Label(action.title, systemImage: action.systemImage ?? .empty)
                 .labelStyle(.flex(isIconVisible: action.systemImage != nil))
                 .padding()
                 .frame(maxWidth: .infinity)
