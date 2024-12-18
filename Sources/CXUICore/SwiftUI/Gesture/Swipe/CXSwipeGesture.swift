@@ -156,6 +156,8 @@ public struct CXSwipeGesture: ViewModifier {
                         withAnimation {
                             self.decidedDirection = decidedDirection
                             reset()
+                        } completion: {
+                            self.decidedDirection = .none
                         }
                     },
                 including: config.isDisabled ? .subviews : .gesture
