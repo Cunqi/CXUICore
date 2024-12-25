@@ -7,4 +7,6 @@
 
 import Foundation
 
+@_exported import CXFoundation
+
 public typealias CXNoArgumentAction = () -> Void

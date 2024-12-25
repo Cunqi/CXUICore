@@ -26,4 +26,12 @@ public extension View {
     func frame(square: CGFloat, alignment: Alignment = .center) -> some View {
         frame(width: square, height: square, alignment: alignment)
     }
+
+    func spacing(insets: EdgeInsets) -> some View {
+        self
+            .padding(.leading, insets.leading)
+            .padding(.top, insets.top)
+            .padding(.trailing, insets.trailing)
+            .padding(.bottom, insets.bottom)
+    }
 }

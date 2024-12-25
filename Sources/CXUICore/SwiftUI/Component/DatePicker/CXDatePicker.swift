@@ -8,7 +8,8 @@
 import CXFoundation
 import SwiftUI
 
-public struct CXDatePicker<DateComponent: CXDateComponent>: View {
+@available(iOS 16.0, *)
+public struct CXDatePicker<DateComponent: CXDateComponent, Content: View>: View {
 
     // MARK: - Internal properties
 
@@ -16,11 +17,28 @@ public struct CXDatePicker<DateComponent: CXDateComponent>: View {
 
     @Binding var selectedItem: DateComponent
 
+    var content: (DateComponent, CXDatePickerConfig<DateComponent>) -> Content
+
+    private var availableItems: [DateComponent] {
+        return (config.isSiblingItemsVisible ? config.leadingItems : [])
+        + config.items
+        + (config.isSiblingItemsVisible ? config.trailingItems : [])
+    }
+
     // MARK: - Initializers
 
-    public init(config: CXDatePickerConfig<DateComponent>, selectedItem: Binding<DateComponent>) {
+    public init(config: CXDatePickerConfig<DateComponent>, selectedItem: Binding<DateComponent>) where Content == EmptyView {
         self.config = config
         self._selectedItem = selectedItem
+        self.content = { _, _ in EmptyView() }
+    }
+
+    public init(config: CXDatePickerConfig<DateComponent>,
+                selectedItem: Binding<DateComponent>,
+                @ViewBuilder extraInfoView: @escaping (DateComponent, CXDatePickerConfig<DateComponent>) -> Content) {
+        self.config = config
+        self._selectedItem = selectedItem
+        self.content = extraInfoView
     }
 
     // MARK: - Views
@@ -28,31 +46,40 @@ public struct CXDatePicker<DateComponent: CXDateComponent>: View {
     public var body: some View {
         VStack {
             if config.isTitlesVisible {
-                HStack {
-                    ForEach(config.titles, id: \.self) { day in
-                        Text(day)
+                HStack(spacing: config.itemSpacing) {
+                    ForEach(config.titles, id: \.self) { weekdaySymbol in
+                        Text(weekdaySymbol)
+                            .font(config.itemFont.bold())
                             .frame(maxWidth: .infinity)
-                            .foregroundColor(.gray)
+                            .foregroundColor(config.titleForegroundColor)
                     }
                 }
             }
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: config.numOfColumns)) {
-                ForEach(Array(0..<config.numOfLeadingEmptyItems).map { $0 }, id: \.hashValue) { _ in
-                    Text("")
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: config.itemSpacing), count: config.numOfColumns), spacing: config.itemSpacing) {
+                if !config.isSiblingItemsVisible {
+                    ForEach(Array(0..<config.leadingItems.count).map { $0 }, id: \.hashValue) { _ in
+                        Text("")
+                    }
                 }
 
-                ForEach(config.items) { item in
-                    Text(item.description)
-                        .frame(maxWidth: .infinity)
-                        .lineLimit(1)
+                ForEach(availableItems) { item in
+                    Button {
+                        selectedItem = item
+                    } label: {
+                        VStack(spacing: config.itemContentSpacing) {
+                            Text(item.description)
+                                .font(config.itemFont)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity)
+                            content(item, config)
+                        }
                         .padding(CXSpacing.oneX)
                         .background(backgroundColor(for: item))
-                        .clipShape(.capsule)
-                        .allowsHitTesting(!isDisabled(for: item))
-                        .onTapGesture {
-                            selectedItem = item
-                        }
+                    }
+                    .disabled(config.isDisabled(for: item))
+                    .clipShape(config.itemShape)
+                    .tint(foregroundColor(for: item))
                 }
                 .monospacedDigit()
             }
@@ -61,38 +88,42 @@ public struct CXDatePicker<DateComponent: CXDateComponent>: View {
 
     // MARK: - Private methods
 
-    private func isDisabled(for item: DateComponent) -> Bool {
-        guard config.minItem != nil || config.maxItem != nil else {
-            return false
-        }
-
-        if let minItem = config.minItem, item < minItem {
-            return true
-        }
-
-        if let maxItem = config.maxItem, item > maxItem {
-            return true
-        }
-
-        return false
-    }
-
     private func backgroundColor(for item: DateComponent) -> Color {
         if selectedItem == item {
-            return .blue
-        } else if isDisabled(for: item) {
-            return .systemGray6
+            return config.itemSelectedBackgroundColor
+        } else if config.isDisabled(for: item) {
+            return config.itemDisabledBackgroundColor
         } else {
-            return .systemGray3
+            return config.itemBackgroundColor
         }
+    }
+
+    private func foregroundColor(for item: DateComponent) -> Color {
+        if selectedItem == item {
+            return config.itemSelectedForegroundColor
+        } else if isSecondary(for: item) {
+            return config.itemSecondaryForegroundColor
+        } else {
+            return config.itemForegroundColor
+        }
+    }
+
+    private func isSecondary(for item: DateComponent) -> Bool {
+        config.leadingItems.contains(item) || config.trailingItems.contains(item)
     }
  }
 
+@available(iOS 16.0, *)
 #Preview {
-    VStack {
-        CXDatePicker(config: .year(years: 2020..<2025), selectedItem: .constant(.init(2021)))
+    CXDatePicker(config: .year(years: 2020..<2025), selectedItem: .constant(.init(2021)))
+}
 
-        CXDatePicker(config: .month(), selectedItem: .constant(.init(1)))
-    }
+@available(iOS 16.0, *)
+#Preview {
+    CXDatePicker(config: .months(year: 2024), selectedItem: .constant(.empty))
+}
 
+@available(iOS 16.0, *)
+#Preview {
+    CXDatePicker(config: .days(from: .now), selectedItem: .constant(.empty))
 }

@@ -32,6 +32,9 @@ public struct CXFlexLabelStyle: LabelStyle {
     /// Determines whether the icon is visible in the label.
     let isIconVisible: Bool
 
+    /// Determines whether the title is visible in the label.
+    let isTitleVisible: Bool
+
     /// The position of the icon relative to the title.
     let iconPosition: IconPosition
 
@@ -47,10 +50,15 @@ public struct CXFlexLabelStyle: LabelStyle {
         HStack(spacing: spacing) {
             if isIconVisible, iconPosition == .leading {
                 configuration.icon
+                    .transition(.move(edge: .leading))
             }
-            configuration.title
+            if isTitleVisible {
+                configuration.title
+                    .transition(.opacity)
+            }
             if isIconVisible, iconPosition == .trailing {
                 configuration.icon
+                    .transition(.move(edge: .trailing))
             }
         }
     }
@@ -63,7 +71,16 @@ public extension LabelStyle where Self == CXFlexLabelStyle {
     ///   - iconPosition: Position of the icon relative to title (default: .leading)
     ///   - spacing: Space between icon and title (default: CXSpacing.halfX)
     /// - Returns: A configured CXFlexLabelStyle instance
-    static func flex(isIconVisible: Bool = true, iconPosition: CXFlexLabelStyle.IconPosition = .leading, spacing: CGFloat = CXSpacing.halfX) -> CXFlexLabelStyle {
-        CXFlexLabelStyle(isIconVisible: isIconVisible, iconPosition: iconPosition, spacing: spacing)
+    static func flex(isIconVisible: Bool = true,
+                     isTitleVisible: Bool = true,
+                     iconPosition: CXFlexLabelStyle.IconPosition = .leading,
+                     spacing: CGFloat = CXSpacing.halfX) -> CXFlexLabelStyle
+    {
+        CXFlexLabelStyle(
+            isIconVisible: isIconVisible,
+            isTitleVisible: isTitleVisible,
+            iconPosition: iconPosition,
+            spacing: spacing
+        )
     }
 }
