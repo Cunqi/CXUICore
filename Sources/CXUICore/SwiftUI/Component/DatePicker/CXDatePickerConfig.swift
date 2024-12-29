@@ -154,7 +154,7 @@ extension CXDateComponentMonth {
         return range.map { CXDateComponentDay(month: .init(year: year.value, month: value), day: $0) }
     }
 
-    func generateLeadingDays(calendar: Calendar = .current, monthSymbols: [String] = Calendar.current.shortMonthSymbols) -> [CXDateComponentDay] {
+    func generateLeadingDays(calendar: Calendar = .current) -> [CXDateComponentDay] {
         guard let currentMonth = date(calendar: calendar),
               let lastMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth),
               let lastDayOfLastMonth = calendar.range(of: .day, in: .month, for: lastMonth)?.upperBound else {
@@ -166,7 +166,7 @@ extension CXDateComponentMonth {
         return range.map { CXDateComponentDay(month: lastDateFieldMonth, day: $0) }
     }
 
-    func generateTrailingDays(calendar: Calendar = .current, monthSymbols: [String] = Calendar.current.shortMonthSymbols) -> [CXDateComponentDay] {
+    func generateTrailingDays(calendar: Calendar = .current) -> [CXDateComponentDay] {
         guard let currentMonth = date(calendar: calendar),
               let nextMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) else {
             return []
